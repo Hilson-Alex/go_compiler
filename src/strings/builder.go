@@ -5,7 +5,6 @@
 package strings
 
 import (
-	"internal/bytealg"
 	"unicode/utf8"
 	"unsafe"
 )
@@ -66,7 +65,7 @@ func (b *Builder) Reset() {
 // grow copies the buffer to a new, larger buffer so that there are at least n
 // bytes of capacity beyond len(b.buf).
 func (b *Builder) grow(n int) {
-	buf := bytealg.MakeNoZero(2*cap(b.buf) + n)[:len(b.buf)]
+	buf := make([]byte, len(b.buf), 2*cap(b.buf)+n)
 	copy(buf, b.buf)
 	b.buf = buf
 }

@@ -5,7 +5,6 @@
 package noder
 
 import (
-	"internal/buildcfg"
 	"internal/pkgbits"
 	"io"
 
@@ -199,7 +198,7 @@ func (l *linker) relocObj(pr *pkgReader, idx pkgbits.Index) pkgbits.Index {
 			l.exportBody(obj, local)
 		}
 
-		if obj.Op() == ir.OTYPE && !obj.Alias() {
+		if obj.Op() == ir.OTYPE {
 			if typ := obj.Type(); !typ.IsInterface() {
 				for _, method := range typ.Methods().Slice() {
 					l.exportBody(method.Nname.(*ir.Name), local)
@@ -269,16 +268,6 @@ func (l *linker) relocFuncExt(w *pkgbits.Encoder, name *ir.Name) {
 
 	l.pragmaFlag(w, name.Func.Pragma)
 	l.linkname(w, name)
-
-	if buildcfg.GOARCH == "wasm" {
-		if name.Func.WasmImport != nil {
-			w.String(name.Func.WasmImport.Module)
-			w.String(name.Func.WasmImport.Name)
-		} else {
-			w.String("")
-			w.String("")
-		}
-	}
 
 	// Relocated extension data.
 	w.Bool(true)

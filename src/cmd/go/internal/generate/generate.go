@@ -18,7 +18,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -90,11 +89,6 @@ Go generate sets several variables when it runs the generator:
 		generator, containing the Go toolchain and standard library.
 	$DOLLAR
 		A dollar sign.
-	$PATH
-		The $PATH of the parent process, with $GOROOT/bin
-		placed at the beginning. This causes generators
-		that execute 'go' commands to use the same 'go'
-		as the parent 'go generate' command.
 
 Other than variable substitution and quoted-string evaluation, no
 special processing such as "globbing" is performed on the command
@@ -467,7 +461,7 @@ func (g *Generator) setShorthand(words []string) {
 	if g.commands[command] != nil {
 		g.errorf("command %q multiply defined", command)
 	}
-	g.commands[command] = slices.Clip(words[2:])
+	g.commands[command] = words[2:len(words):len(words)] // force later append to make copy
 }
 
 // exec runs the command specified by the argument. The first word is

@@ -16,11 +16,10 @@ TEXT runtime·memclrNoHeapPointers<ABIInternal>(SB),NOSPLIT,$0-16
 	BLT	X11, X9, check4
 
 	// Check alignment
-	AND	$7, X10, X5
+	AND	$3, X10, X5
 	BEQZ	X5, aligned
 
 	// Zero one byte at a time until we reach 8 byte alignment.
-	SUB	X5, X9, X5
 	SUB	X5, X11, X11
 align:
 	ADD	$-1, X5
@@ -29,7 +28,7 @@ align:
 	BNEZ	X5, align
 
 aligned:
-	// X9 already contains $8
+	MOV	$8, X9
 	BLT	X11, X9, check4
 	MOV	$16, X9
 	BLT	X11, X9, zero8

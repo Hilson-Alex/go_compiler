@@ -5,7 +5,8 @@ package wasm
 import "cmd/internal/obj"
 
 var Anames = []string{
-	obj.A_ARCHSPECIFIC: "Get",
+	obj.A_ARCHSPECIFIC: "CallImport",
+	"Get",
 	"Set",
 	"Tee",
 	"Not",

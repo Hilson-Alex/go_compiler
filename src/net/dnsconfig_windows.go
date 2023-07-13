@@ -5,7 +5,6 @@
 package net
 
 import (
-	"internal/syscall/windows"
 	"syscall"
 	"time"
 )
@@ -31,10 +30,6 @@ func dnsReadConfig(ignoredFilename string) (conf *dnsConfig) {
 	// In practice, however, it mostly works.
 	for _, aa := range aas {
 		for dns := aa.FirstDnsServerAddress; dns != nil; dns = dns.Next {
-			// Only take interfaces whose OperStatus is IfOperStatusUp(0x01) into DNS configs.
-			if aa.OperStatus != windows.IfOperStatusUp {
-				continue
-			}
 			sa, err := dns.Address.Sockaddr.Sockaddr()
 			if err != nil {
 				continue

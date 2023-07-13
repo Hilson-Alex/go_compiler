@@ -325,14 +325,16 @@ TEXT runtime·sigfwd(SB),NOSPLIT,$0-32
 	MOVL	sig+8(FP),   DI
 	MOVQ	info+16(FP), SI
 	MOVQ	ctx+24(FP),  DX
-	MOVQ	SP, BX		// callee-saved
+	PUSHQ	BP
+	MOVQ	SP, BP
 	ANDQ	$~15, SP     // alignment for x86_64 ABI
 	CALL	AX
-	MOVQ	BX, SP
+	MOVQ	BP, SP
+	POPQ	BP
 	RET
 
 // Called using C ABI.
-TEXT runtime·sigtramp(SB),NOSPLIT|TOPFRAME|NOFRAME,$0
+TEXT runtime·sigtramp(SB),NOSPLIT|TOPFRAME,$0
 	// Transition from C ABI to Go ABI.
 	PUSH_REGS_HOST_TO_ABI0()
 
@@ -353,11 +355,11 @@ TEXT runtime·sigtramp(SB),NOSPLIT|TOPFRAME|NOFRAME,$0
 
 	ADJSP	$-24
 
-	POP_REGS_HOST_TO_ABI0()
+        POP_REGS_HOST_TO_ABI0()
 	RET
 
 // Called using C ABI.
-TEXT runtime·sigprofNonGoWrapper<>(SB),NOSPLIT|NOFRAME,$0
+TEXT runtime·sigprofNonGoWrapper<>(SB),NOSPLIT,$0
 	// Transition from C ABI to Go ABI.
 	PUSH_REGS_HOST_TO_ABI0()
 
@@ -458,16 +460,11 @@ sigtrampnog:
 	JMP	AX
 
 // For cgo unwinding to work, this function must look precisely like
-// the one in glibc. The glibc source code is:
-// https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/sysv/linux/x86_64/libc_sigaction.c;h=afdce87381228f0cf32fa9fa6c8c4efa5179065c#l80
+// the one in glibc.  The glibc source code is:
+// https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/sysv/linux/x86_64/sigaction.c
 // The code that cares about the precise instructions used is:
-// https://gcc.gnu.org/git/?p=gcc.git;a=blob;f=libgcc/config/i386/linux-unwind.h;h=5486223d60272c73d5103b29ae592d2ee998e1cf#l49
-//
-// For gdb unwinding to work, this function must look precisely like the one in
-// glibc and must be named "__restore_rt" or contain the string "sigaction" in
-// the name. The gdb source code is:
-// https://sourceware.org/git/?p=binutils-gdb.git;a=blob;f=gdb/amd64-linux-tdep.c;h=cbbac1a0c64e1deb8181b9d0ff6404e328e2979d#l178
-TEXT runtime·sigreturn__sigaction(SB),NOSPLIT,$0
+// https://gcc.gnu.org/viewcvs/gcc/trunk/libgcc/config/i386/linux-unwind.h?revision=219188&view=markup
+TEXT runtime·sigreturn(SB),NOSPLIT,$0
 	MOVQ	$SYS_rt_sigreturn, AX
 	SYSCALL
 	INT $3	// not reached
@@ -559,7 +556,7 @@ TEXT runtime·futex(SB),NOSPLIT,$0
 	RET
 
 // int32 clone(int32 flags, void *stk, M *mp, G *gp, void (*fn)(void));
-TEXT runtime·clone(SB),NOSPLIT|NOFRAME,$0
+TEXT runtime·clone(SB),NOSPLIT,$0
 	MOVL	flags+0(FP), DI
 	MOVQ	stk+8(FP), SI
 	MOVQ	$0, DX
@@ -623,7 +620,7 @@ nog2:
 	SYSCALL
 	JMP	-3(PC)	// keep exiting
 
-TEXT runtime·sigaltstack(SB),NOSPLIT,$0
+TEXT runtime·sigaltstack(SB),NOSPLIT,$-8
 	MOVQ	new+0(FP), DI
 	MOVQ	old+8(FP), SI
 	MOVQ	$SYS_sigaltstack, AX

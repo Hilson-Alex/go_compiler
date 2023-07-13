@@ -50,8 +50,7 @@ const encodeStd = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 const encodeHex = "0123456789ABCDEFGHIJKLMNOPQRSTUV"
 
 // NewEncoding returns a new Encoding defined by the given alphabet,
-// which must be a 32-byte string. The alphabet is treated as sequence
-// of byte values without any special treatment for multi-byte UTF-8.
+// which must be a 32-byte string.
 func NewEncoding(encoder string) *Encoding {
 	if len(encoder) != 32 {
 		panic("encoding alphabet is not 32-bytes long")
@@ -81,8 +80,6 @@ var HexEncoding = NewEncoding(encodeHex)
 // The padding character must not be '\r' or '\n', must not
 // be contained in the encoding's alphabet and must be a rune equal or
 // below '\xff'.
-// Padding characters above '\x7f' are encoded as their exact byte value
-// rather than using the UTF-8 representation of the codepoint.
 func (enc Encoding) WithPadding(padding rune) *Encoding {
 	if padding == '\r' || padding == '\n' || padding > 0xff {
 		panic("invalid padding")

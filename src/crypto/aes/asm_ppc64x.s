@@ -644,7 +644,7 @@ TEXT ·cryptBlocksChain(SB), NOSPLIT|NOFRAME, $0
 
 	BEQ	Lcbc_dec
 
-	PCALIGN $16
+	PCALIGN $32
 Lcbc_enc:
 	P8_LXVB16X(INP, R0, INOUT)
 	ADD	$16, INP
@@ -659,7 +659,7 @@ Lcbc_enc:
 	CLEAR_KEYS()
 	RET
 
-	PCALIGN $16
+	PCALIGN $32
 Lcbc_dec:
 	P8_LXVB16X(INP, R0, TMP)
 	ADD	$16, INP

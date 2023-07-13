@@ -5,7 +5,6 @@
 package runtime
 
 import (
-	"internal/goexperiment"
 	"runtime/internal/atomic"
 	"unsafe"
 )
@@ -21,9 +20,9 @@ import (
 //go:nosplit
 func atomicwb(ptr *unsafe.Pointer, new unsafe.Pointer) {
 	slot := (*uintptr)(unsafe.Pointer(ptr))
-	buf := getg().m.p.ptr().wbBuf.get2()
-	buf[0] = *slot
-	buf[1] = uintptr(new)
+	if !getg().m.p.ptr().wbBuf.putFast(*slot, uintptr(new)) {
+		wbBufFlush(slot, uintptr(new))
+	}
 }
 
 // atomicstorep performs *ptr = new atomically and invokes a write barrier.
@@ -32,9 +31,6 @@ func atomicwb(ptr *unsafe.Pointer, new unsafe.Pointer) {
 func atomicstorep(ptr unsafe.Pointer, new unsafe.Pointer) {
 	if writeBarrier.enabled {
 		atomicwb((*unsafe.Pointer)(ptr), new)
-	}
-	if goexperiment.CgoCheck2 {
-		cgoCheckPtrWrite((*unsafe.Pointer)(ptr), new)
 	}
 	atomic.StorepNoWB(noescape(ptr), new)
 }
@@ -57,9 +53,6 @@ func atomic_casPointer(ptr *unsafe.Pointer, old, new unsafe.Pointer) bool {
 	if writeBarrier.enabled {
 		atomicwb(ptr, new)
 	}
-	if goexperiment.CgoCheck2 {
-		cgoCheckPtrWrite(ptr, new)
-	}
 	return atomic.Casp1(ptr, old, new)
 }
 
@@ -76,9 +69,6 @@ func sync_atomic_StorePointer(ptr *unsafe.Pointer, new unsafe.Pointer) {
 	if writeBarrier.enabled {
 		atomicwb(ptr, new)
 	}
-	if goexperiment.CgoCheck2 {
-		cgoCheckPtrWrite(ptr, new)
-	}
 	sync_atomic_StoreUintptr((*uintptr)(unsafe.Pointer(ptr)), uintptr(new))
 }
 
@@ -90,9 +80,6 @@ func sync_atomic_SwapUintptr(ptr *uintptr, new uintptr) uintptr
 func sync_atomic_SwapPointer(ptr *unsafe.Pointer, new unsafe.Pointer) unsafe.Pointer {
 	if writeBarrier.enabled {
 		atomicwb(ptr, new)
-	}
-	if goexperiment.CgoCheck2 {
-		cgoCheckPtrWrite(ptr, new)
 	}
 	old := unsafe.Pointer(sync_atomic_SwapUintptr((*uintptr)(noescape(unsafe.Pointer(ptr))), uintptr(new)))
 	return old
@@ -106,9 +93,6 @@ func sync_atomic_CompareAndSwapUintptr(ptr *uintptr, old, new uintptr) bool
 func sync_atomic_CompareAndSwapPointer(ptr *unsafe.Pointer, old, new unsafe.Pointer) bool {
 	if writeBarrier.enabled {
 		atomicwb(ptr, new)
-	}
-	if goexperiment.CgoCheck2 {
-		cgoCheckPtrWrite(ptr, new)
 	}
 	return sync_atomic_CompareAndSwapUintptr((*uintptr)(noescape(unsafe.Pointer(ptr))), uintptr(old), uintptr(new))
 }

@@ -53,11 +53,8 @@ func LookPath(file string) (string, error) {
 	for _, dir := range filepath.SplitList(path) {
 		path := filepath.Join(dir, file)
 		if err := findExecutable(path); err == nil {
-			if !filepath.IsAbs(path) {
-				if execerrdot.Value() != "0" {
-					return path, &Error{file, ErrDot}
-				}
-				execerrdot.IncNonDefault()
+			if !filepath.IsAbs(path) && execerrdot.Value() != "0" {
+				return path, &Error{file, ErrDot}
 			}
 			return path, nil
 		}

@@ -109,13 +109,11 @@ allg,
 < MALLOC
 # Below MALLOC is the malloc implementation.
 < fin,
-  spanSetSpine,
+  gcBitsArenas,
+  mheapSpecial,
   mspanSpecial,
+  spanSetSpine,
   MPROF;
-
-# We can acquire gcBitsArenas for pinner bits, and
-# it's guarded by mspanSpecial.
-MALLOC, mspanSpecial < gcBitsArenas;
 
 # Memory profiling
 MPROF < profInsert, profBlock, profMemActive;
@@ -161,11 +159,6 @@ stackLarge,
 # Above mheap is anything that can call the span allocator.
 < mheap;
 # Below mheap is the span allocator implementation.
-#
-# Specials: we're allowed to allocate a special while holding
-# an mspanSpecial lock, and they're part of the malloc implementation.
-# Pinner bits might be freed by the span allocator.
-mheap, mspanSpecial < mheapSpecial;
 mheap, mheapSpecial < globalAlloc;
 
 # Execution tracer events (with a P)
@@ -186,8 +179,6 @@ NONE < panic;
 # deadlock is not acquired while holding panic, but it also needs to be
 # below all other locks.
 panic < deadlock;
-# raceFini is only held while exiting.
-panic < raceFini;
 `
 
 // cyclicRanks lists lock ranks that allow multiple locks of the same

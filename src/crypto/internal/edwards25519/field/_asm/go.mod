@@ -1,4 +1,4 @@
-module std/crypto/internal/edwards25519/field/_asm
+module asm
 
 go 1.19
 

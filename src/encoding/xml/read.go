@@ -284,8 +284,7 @@ func (d *Decoder) unmarshalAttr(val reflect.Value, attr Attr) error {
 		// Slice of element values.
 		// Grow slice.
 		n := val.Len()
-		val.Grow(1)
-		val.SetLen(n + 1)
+		val.Set(reflect.Append(val, reflect.Zero(val.Type().Elem())))
 
 		// Recur to read element into slice.
 		if err := d.unmarshalAttr(val.Index(n), attr); err != nil {
@@ -411,8 +410,7 @@ func (d *Decoder) unmarshal(val reflect.Value, start *StartElement, depth int) e
 		// Slice of element values.
 		// Grow slice.
 		n := v.Len()
-		v.Grow(1)
-		v.SetLen(n + 1)
+		v.Set(reflect.Append(val, reflect.Zero(v.Type().Elem())))
 
 		// Recur to read element into slice.
 		if err := d.unmarshal(v.Index(n), start, depth+1); err != nil {

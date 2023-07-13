@@ -6,8 +6,7 @@
 
 package syscall
 
-// forkExecPipe opens a pipe and non-atomically sets O_CLOEXEC on both file
-// descriptors.
+// Try to open a pipe with O_CLOEXEC set on both file descriptors.
 func forkExecPipe(p []int) error {
 	err := Pipe(p)
 	if err != nil {
@@ -19,12 +18,4 @@ func forkExecPipe(p []int) error {
 	}
 	_, err = fcntl(p[1], F_SETFD, FD_CLOEXEC)
 	return err
-}
-
-func acquireForkLock() {
-	ForkLock.Lock()
-}
-
-func releaseForkLock() {
-	ForkLock.Unlock()
 }

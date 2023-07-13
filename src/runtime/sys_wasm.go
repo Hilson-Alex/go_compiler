@@ -21,7 +21,6 @@ func wasmDiv()
 func wasmTruncS()
 func wasmTruncU()
 
-//go:wasmimport gojs runtime.wasmExit
 func wasmExit(code int32)
 
 // adjust Gobuf as it if executed a call to fn with context ctxt

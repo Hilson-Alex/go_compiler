@@ -39,7 +39,7 @@
 //     some packages may not be initialized until long after the
 //     application has started running.
 //
-//   - Bugs in applications that load plugins could be exploited by
+//   - Bugs in applications that load plugins could be exploited by an
 //     an attacker to load dangerous or untrusted libraries.
 //
 //   - Runtime crashes are likely to occur unless all parts of the

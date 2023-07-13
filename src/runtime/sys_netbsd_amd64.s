@@ -13,6 +13,8 @@
 
 #define CLOCK_REALTIME		0
 #define CLOCK_MONOTONIC		3
+#define FD_CLOEXEC		1
+#define F_SETFD			2
 
 #define SYS_exit			1
 #define SYS_read			3
@@ -28,7 +30,6 @@
 #define SYS___sysctl			202
 #define SYS___sigaltstack14		281
 #define SYS___sigprocmask14		293
-#define SYS_issetugid			305
 #define SYS_getcontext			307
 #define SYS_setcontext			308
 #define SYS__lwp_create			309
@@ -295,14 +296,16 @@ TEXT runtime·sigfwd(SB),NOSPLIT,$0-32
 	MOVL	sig+8(FP),   DI
 	MOVQ	info+16(FP), SI
 	MOVQ	ctx+24(FP),  DX
-	MOVQ	SP, BX		// callee-saved
-	ANDQ	$~15, SP	// alignment for x86_64 ABI
+	PUSHQ	BP
+	MOVQ	SP, BP
+	ANDQ	$~15, SP     // alignment for x86_64 ABI
 	CALL	AX
-	MOVQ	BX, SP
+	MOVQ	BP, SP
+	POPQ	BP
 	RET
 
 // Called using C ABI.
-TEXT runtime·sigtramp(SB),NOSPLIT|TOPFRAME|NOFRAME,$0
+TEXT runtime·sigtramp(SB),NOSPLIT|TOPFRAME,$0
 	// Transition from C ABI to Go ABI.
 	PUSH_REGS_HOST_TO_ABI0()
 
@@ -323,7 +326,7 @@ TEXT runtime·sigtramp(SB),NOSPLIT|TOPFRAME|NOFRAME,$0
 
 	ADJSP	$-24
 
-	POP_REGS_HOST_TO_ABI0()
+        POP_REGS_HOST_TO_ABI0()
 	RET
 
 TEXT runtime·mmap(SB),NOSPLIT,$0
@@ -431,28 +434,11 @@ TEXT runtime·kevent(SB),NOSPLIT,$0
 	MOVL	AX, ret+48(FP)
 	RET
 
-// func fcntl(fd, cmd, arg int32) (int32, int32)
-TEXT runtime·fcntl(SB),NOSPLIT,$0
+// void runtime·closeonexec(int32 fd)
+TEXT runtime·closeonexec(SB),NOSPLIT,$0
 	MOVL	fd+0(FP), DI	// fd
-	MOVL	cmd+4(FP), SI	// cmd
-	MOVL	arg+8(FP), DX	// arg
+	MOVQ	$F_SETFD, SI
+	MOVQ	$FD_CLOEXEC, DX
 	MOVL	$SYS_fcntl, AX
 	SYSCALL
-	JCC	noerr
-	MOVL	$-1, ret+16(FP)
-	MOVL	AX, errno+20(FP)
-	RET
-noerr:
-	MOVL	AX, ret+16(FP)
-	MOVL	$0, errno+20(FP)
-	RET
-
-// func issetugid() int32
-TEXT runtime·issetugid(SB),NOSPLIT,$0
-	MOVQ	$0, DI
-	MOVQ	$0, SI
-	MOVQ	$0, DX
-	MOVL	$SYS_issetugid, AX
-	SYSCALL
-	MOVL	AX, ret+0(FP)
 	RET

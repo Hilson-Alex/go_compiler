@@ -36,8 +36,7 @@ fi
 GOROOT="$(cd .. && pwd)"
 
 gettargets() {
-	../bin/go tool dist list | sed -e 's|/|-|' |
-		egrep -v '^(android|ios)' # need C toolchain even for cross-compiling
+	../bin/go tool dist list | sed -e 's|/|-|'
 	echo linux-arm-arm5
 }
 

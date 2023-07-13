@@ -650,3 +650,6 @@ TEXT runtime·sbrk0(SB),NOSPLIT,$0-4
 	SWI	$0
 	MOVW	R0, ret+0(FP)
 	RET
+
+TEXT runtime·sigreturn(SB),NOSPLIT,$0-0
+	RET

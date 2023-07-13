@@ -74,14 +74,7 @@ var (
 
 var pkgconfig coverage.CoverPkgConfig
 
-// outputfiles is the list of *.cover.go instrumented outputs to write,
-// one per input (set when -pkgcfg is in use)
-var outputfiles []string
-
-// covervarsoutfile is an additional Go source file into which we'll
-// write definitions of coverage counter variables + meta data variables
-// (set when -pkgcfg is in use).
-var covervarsoutfile string
+var outputfiles []string // set when -pkgcfg is in use
 
 var profile string // The profile to read; the value of -html or -func
 
@@ -95,7 +88,7 @@ const (
 func main() {
 	objabi.AddVersionFlag()
 	flag.Usage = usage
-	objabi.Flagparse(usage)
+	flag.Parse()
 
 	// Usage information when no arguments.
 	if flag.NFlag() == 0 && flag.NArg() == 0 {
@@ -172,8 +165,6 @@ func parseFlags() error {
 				if outputfiles, err = readOutFileList(*outfilelist); err != nil {
 					return err
 				}
-				covervarsoutfile = outputfiles[0]
-				outputfiles = outputfiles[1:]
 				numInputs := len(flag.Args())
 				numOutputs := len(outputfiles)
 				if numOutputs != numInputs {
@@ -577,9 +568,9 @@ func annotate(names []string) {
 	}
 	// TODO: process files in parallel here if it matters.
 	for k, name := range names {
-		if strings.ContainsAny(name, "\r\n") {
-			// annotateFile uses '//line' directives, which don't permit newlines.
-			log.Fatalf("cover: input path contains newline character: %q", name)
+		last := false
+		if k == len(names)-1 {
+			last = true
 		}
 
 		fd := os.Stdout
@@ -599,27 +590,16 @@ func annotate(names []string) {
 			}
 			isStdout = false
 		}
-		p.annotateFile(name, fd)
+		p.annotateFile(name, fd, last)
 		if !isStdout {
 			if err := fd.Close(); err != nil {
 				log.Fatalf("cover: %s", err)
 			}
 		}
 	}
-
-	if *pkgcfg != "" {
-		fd, err := os.Create(covervarsoutfile)
-		if err != nil {
-			log.Fatalf("cover: %s", err)
-		}
-		p.emitMetaData(fd)
-		if err := fd.Close(); err != nil {
-			log.Fatalf("cover: %s", err)
-		}
-	}
 }
 
-func (p *Package) annotateFile(name string, fd io.Writer) {
+func (p *Package) annotateFile(name string, fd io.Writer, last bool) {
 	fset := token.NewFileSet()
 	content, err := os.ReadFile(name)
 	if err != nil {
@@ -665,11 +645,6 @@ func (p *Package) annotateFile(name string, fd io.Writer) {
 	}
 	newContent := file.edit.Bytes()
 
-	if strings.ContainsAny(name, "\r\n") {
-		// This should have been checked by the caller already, but we double check
-		// here just to be sure we haven't missed a caller somewhere.
-		panic(fmt.Sprintf("annotateFile: name contains unexpected newline character: %q", name))
-	}
 	fmt.Fprintf(fd, "//line %s:1:1\n", name)
 	fd.Write(newContent)
 
@@ -681,7 +656,12 @@ func (p *Package) annotateFile(name string, fd io.Writer) {
 	// Emit a reference to the atomic package to avoid
 	// import and not used error when there's no code in a file.
 	if *mode == "atomic" {
-		fmt.Fprintf(fd, "\nvar _ = %sLoadUint32\n", atomicPackagePrefix())
+		fmt.Fprintf(fd, "var _ = %sLoadUint32\n", atomicPackagePrefix())
+	}
+
+	// Last file? Emit meta-data and converage config.
+	if last {
+		p.emitMetaData(fd)
 	}
 }
 
@@ -1092,9 +1072,6 @@ func (p *Package) emitMetaData(w io.Writer) {
 	if counterStmt == nil && len(p.counterLengths) != 0 {
 		panic("internal error: seen functions with regonly/testmain")
 	}
-
-	// Emit package name.
-	fmt.Fprintf(w, "\npackage %s\n\n", pkgconfig.PkgName)
 
 	// Emit package ID var.
 	fmt.Fprintf(w, "\nvar %sP uint32\n", *varVar)

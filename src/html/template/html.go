@@ -14,9 +14,6 @@ import (
 // htmlNospaceEscaper escapes for inclusion in unquoted attribute values.
 func htmlNospaceEscaper(args ...any) string {
 	s, t := stringify(args...)
-	if s == "" {
-		return filterFailsafe
-	}
 	if t == contentTypeHTML {
 		return htmlReplacer(stripTags(s), htmlNospaceNormReplacementTable, false)
 	}

@@ -7,6 +7,7 @@
 package syscall
 
 import (
+	"unicode/utf16"
 	"unsafe"
 )
 
@@ -23,7 +24,7 @@ func Getenv(key string) (value string, found bool) {
 			return "", false
 		}
 		if n <= uint32(len(b)) {
-			return UTF16ToString(b[:n]), true
+			return string(utf16.Decode(b[:n])), true
 		}
 	}
 }
@@ -62,7 +63,7 @@ func Clearenv() {
 	for _, s := range Environ() {
 		// Environment variables can begin with =
 		// so start looking for the separator = at j=1.
-		// https://devblogs.microsoft.com/oldnewthing/20100506-00/?p=14133
+		// https://blogs.msdn.com/b/oldnewthing/archive/2010/05/06/10008132.aspx
 		for j := 1; j < len(s); j++ {
 			if s[j] == '=' {
 				Unsetenv(s[0:j])
@@ -89,7 +90,7 @@ func Environ() []string {
 		}
 
 		entry := unsafe.Slice(envp, (uintptr(end)-uintptr(unsafe.Pointer(envp)))/size)
-		r = append(r, UTF16ToString(entry))
+		r = append(r, string(utf16.Decode(entry)))
 		envp = (*uint16)(unsafe.Add(end, size))
 	}
 	return r

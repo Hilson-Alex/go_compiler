@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package alias implements memory aliasing tests.
+// Package alias implements memory alaising tests.
 // This code also exists as golang.org/x/crypto/internal/alias.
 package alias
 

@@ -86,9 +86,7 @@ func Getppid() int { return syscall.Getppid() }
 // about the underlying operating system process.
 //
 // On Unix systems, FindProcess always succeeds and returns a Process
-// for the given pid, regardless of whether the process exists. To test whether
-// the process actually exists, see whether p.Signal(syscall.Signal(0)) reports
-// an error.
+// for the given pid, regardless of whether the process exists.
 func FindProcess(pid int) (*Process, error) {
 	return findProcess(pid)
 }

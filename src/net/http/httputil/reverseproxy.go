@@ -257,7 +257,7 @@ func joinURLPath(a, b *url.URL) (path, rawpath string) {
 //		Rewrite: func(r *ProxyRequest) {
 //			r.SetURL(target)
 //			r.Out.Host = r.In.Host // if desired
-//		},
+//		}
 //	}
 func NewSingleHostReverseProxy(target *url.URL) *ReverseProxy {
 	director := func(req *http.Request) {
@@ -524,7 +524,9 @@ func (p *ReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		// Force chunking if we saw a response trailer.
 		// This prevents net/http from calculating the length for short
 		// bodies and adding a Content-Length.
-		http.NewResponseController(rw).Flush()
+		if fl, ok := rw.(http.Flusher); ok {
+			fl.Flush()
+		}
 	}
 
 	if len(res.Trailer) == announcedTrailers {
@@ -599,22 +601,21 @@ func (p *ReverseProxy) flushInterval(res *http.Response) time.Duration {
 	return p.FlushInterval
 }
 
-func (p *ReverseProxy) copyResponse(dst http.ResponseWriter, src io.Reader, flushInterval time.Duration) error {
-	var w io.Writer = dst
-
+func (p *ReverseProxy) copyResponse(dst io.Writer, src io.Reader, flushInterval time.Duration) error {
 	if flushInterval != 0 {
-		mlw := &maxLatencyWriter{
-			dst:     dst,
-			flush:   http.NewResponseController(dst).Flush,
-			latency: flushInterval,
+		if wf, ok := dst.(writeFlusher); ok {
+			mlw := &maxLatencyWriter{
+				dst:     wf,
+				latency: flushInterval,
+			}
+			defer mlw.stop()
+
+			// set up initial timer so headers get flushed even if body writes are delayed
+			mlw.flushPending = true
+			mlw.t = time.AfterFunc(flushInterval, mlw.delayedFlush)
+
+			dst = mlw
 		}
-		defer mlw.stop()
-
-		// set up initial timer so headers get flushed even if body writes are delayed
-		mlw.flushPending = true
-		mlw.t = time.AfterFunc(flushInterval, mlw.delayedFlush)
-
-		w = mlw
 	}
 
 	var buf []byte
@@ -622,7 +623,7 @@ func (p *ReverseProxy) copyResponse(dst http.ResponseWriter, src io.Reader, flus
 		buf = p.BufferPool.Get()
 		defer p.BufferPool.Put(buf)
 	}
-	_, err := p.copyBuffer(w, src, buf)
+	_, err := p.copyBuffer(dst, src, buf)
 	return err
 }
 
@@ -667,9 +668,13 @@ func (p *ReverseProxy) logf(format string, args ...any) {
 	}
 }
 
+type writeFlusher interface {
+	io.Writer
+	http.Flusher
+}
+
 type maxLatencyWriter struct {
-	dst     io.Writer
-	flush   func() error
+	dst     writeFlusher
 	latency time.Duration // non-zero; negative means to flush immediately
 
 	mu           sync.Mutex // protects t, flushPending, and dst.Flush
@@ -682,7 +687,7 @@ func (m *maxLatencyWriter) Write(p []byte) (n int, err error) {
 	defer m.mu.Unlock()
 	n, err = m.dst.Write(p)
 	if m.latency < 0 {
-		m.flush()
+		m.dst.Flush()
 		return
 	}
 	if m.flushPending {
@@ -703,7 +708,7 @@ func (m *maxLatencyWriter) delayedFlush() {
 	if !m.flushPending { // if stop was called but AfterFunc already started this goroutine
 		return
 	}
-	m.flush()
+	m.dst.Flush()
 	m.flushPending = false
 }
 
@@ -734,16 +739,14 @@ func (p *ReverseProxy) handleUpgradeResponse(rw http.ResponseWriter, req *http.R
 		return
 	}
 
+	hj, ok := rw.(http.Hijacker)
+	if !ok {
+		p.getErrorHandler()(rw, req, fmt.Errorf("can't switch protocols using non-Hijacker ResponseWriter type %T", rw))
+		return
+	}
 	backConn, ok := res.Body.(io.ReadWriteCloser)
 	if !ok {
 		p.getErrorHandler()(rw, req, fmt.Errorf("internal error: 101 switching protocols response with non-writable body"))
-		return
-	}
-
-	rc := http.NewResponseController(rw)
-	conn, brw, hijackErr := rc.Hijack()
-	if errors.Is(hijackErr, http.ErrNotSupported) {
-		p.getErrorHandler()(rw, req, fmt.Errorf("can't switch protocols using non-Hijacker ResponseWriter type %T", rw))
 		return
 	}
 
@@ -757,10 +760,12 @@ func (p *ReverseProxy) handleUpgradeResponse(rw http.ResponseWriter, req *http.R
 		}
 		backConn.Close()
 	}()
+
 	defer close(backConnCloseCh)
 
-	if hijackErr != nil {
-		p.getErrorHandler()(rw, req, fmt.Errorf("Hijack failed on protocol switch: %v", hijackErr))
+	conn, brw, err := hj.Hijack()
+	if err != nil {
+		p.getErrorHandler()(rw, req, fmt.Errorf("Hijack failed on protocol switch: %v", err))
 		return
 	}
 	defer conn.Close()

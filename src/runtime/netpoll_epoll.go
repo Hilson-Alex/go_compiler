@@ -52,8 +52,7 @@ func netpollIsPollDescriptor(fd uintptr) bool {
 func netpollopen(fd uintptr, pd *pollDesc) uintptr {
 	var ev syscall.EpollEvent
 	ev.Events = syscall.EPOLLIN | syscall.EPOLLOUT | syscall.EPOLLRDHUP | syscall.EPOLLET
-	tp := taggedPointerPack(unsafe.Pointer(pd), pd.fdseq.Load())
-	*(*taggedPointer)(unsafe.Pointer(&ev.Data)) = tp
+	*(**pollDesc)(unsafe.Pointer(&ev.Data)) = pd
 	return syscall.EpollCtl(epfd, syscall.EPOLL_CTL_ADD, int32(fd), &ev)
 }
 
@@ -159,13 +158,9 @@ retry:
 			mode += 'w'
 		}
 		if mode != 0 {
-			tp := *(*taggedPointer)(unsafe.Pointer(&ev.Data))
-			pd := (*pollDesc)(tp.pointer())
-			tag := tp.tag()
-			if pd.fdseq.Load() == tag {
-				pd.setEventErr(ev.Events == syscall.EPOLLERR, tag)
-				netpollready(&toRun, pd, mode)
-			}
+			pd := *(**pollDesc)(unsafe.Pointer(&ev.Data))
+			pd.setEventErr(ev.Events == syscall.EPOLLERR)
+			netpollready(&toRun, pd, mode)
 		}
 	}
 	return toRun

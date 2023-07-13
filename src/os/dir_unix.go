@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build aix || dragonfly || freebsd || (js && wasm) || wasip1 || linux || netbsd || openbsd || solaris
+//go:build aix || dragonfly || freebsd || (js && wasm) || linux || netbsd || openbsd || solaris
 
 package os
 
@@ -89,11 +89,7 @@ func (f *File) readdir(n int, mode readdirMode) (names []string, dirents []DirEn
 		if !ok {
 			break
 		}
-		// When building to wasip1, the host runtime might be running on Windows
-		// or might expose a remote file system which does not have the concept
-		// of inodes. Therefore, we cannot make the assumption that it is safe
-		// to skip entries with zero inodes.
-		if ino == 0 && runtime.GOOS != "wasip1" {
+		if ino == 0 {
 			continue
 		}
 		const namoff = uint64(unsafe.Offsetof(syscall.Dirent{}.Name))

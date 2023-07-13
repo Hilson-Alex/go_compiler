@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Package bytes implements functions for the manipulation of byte slices.
-// It is analogous to the facilities of the [strings] package.
+// It is analogous to the facilities of the strings package.
 package bytes
 
 import (
@@ -84,11 +84,6 @@ func ContainsAny(b []byte, chars string) bool {
 // ContainsRune reports whether the rune is contained in the UTF-8-encoded byte slice b.
 func ContainsRune(b []byte, r rune) bool {
 	return IndexRune(b, r) >= 0
-}
-
-// ContainsFunc reports whether any of the UTF-8-encoded code points r within b satisfy f(r).
-func ContainsFunc(b []byte, f func(rune) bool) bool {
-	return IndexFunc(b, f) >= 0
 }
 
 // IndexByte returns the index of the first instance of c in b, or -1 if c is not present in b.
@@ -533,22 +528,12 @@ func Join(s [][]byte, sep []byte) []byte {
 		// Just return a copy.
 		return append([]byte(nil), s[0]...)
 	}
-
-	var n int
-	if len(sep) > 0 {
-		if len(sep) >= maxInt/(len(s)-1) {
-			panic("bytes: Join output length overflow")
-		}
-		n += len(sep) * (len(s) - 1)
-	}
+	n := len(sep) * (len(s) - 1)
 	for _, v := range s {
-		if len(v) > maxInt-n {
-			panic("bytes: Join output length overflow")
-		}
 		n += len(v)
 	}
 
-	b := bytealg.MakeNoZero(n)
+	b := make([]byte, n)
 	bp := copy(b, s[0])
 	for _, v := range s[1:] {
 		bp += copy(b[bp:], sep)
@@ -599,21 +584,21 @@ func Repeat(b []byte, count int) []byte {
 	if count == 0 {
 		return []byte{}
 	}
-
 	// Since we cannot return an error on overflow,
-	// we should panic if the repeat will generate an overflow.
+	// we should panic if the repeat will generate
+	// an overflow.
 	// See golang.org/issue/16237.
 	if count < 0 {
 		panic("bytes: negative Repeat count")
+	} else if len(b)*count/count != len(b) {
+		panic("bytes: Repeat count causes overflow")
 	}
-	if len(b) >= maxInt/count {
-		panic("bytes: Repeat output length overflow")
-	}
-	n := len(b) * count
 
 	if len(b) == 0 {
 		return []byte{}
 	}
+
+	n := len(b) * count
 
 	// Past a certain chunk size it is counterproductive to use
 	// larger chunks as the source of the write, as when the source
@@ -633,9 +618,9 @@ func Repeat(b []byte, count int) []byte {
 			chunkMax = len(b)
 		}
 	}
-	nb := bytealg.MakeNoZero(n)
+	nb := make([]byte, n)
 	bp := copy(nb, b)
-	for bp < n {
+	for bp < len(nb) {
 		chunk := bp
 		if chunk > chunkMax {
 			chunk = chunkMax
@@ -663,7 +648,7 @@ func ToUpper(s []byte) []byte {
 			// Just return a copy.
 			return append([]byte(""), s...)
 		}
-		b := bytealg.MakeNoZero(len(s))
+		b := make([]byte, len(s))
 		for i := 0; i < len(s); i++ {
 			c := s[i]
 			if 'a' <= c && c <= 'z' {
@@ -693,7 +678,7 @@ func ToLower(s []byte) []byte {
 		if !hasUpper {
 			return append([]byte(""), s...)
 		}
-		b := bytealg.MakeNoZero(len(s))
+		b := make([]byte, len(s))
 		for i := 0; i < len(s); i++ {
 			c := s[i]
 			if 'A' <= c && c <= 'Z' {

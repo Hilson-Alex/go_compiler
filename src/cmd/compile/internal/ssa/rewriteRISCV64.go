@@ -1,4 +1,5 @@
-// Code generated from _gen/RISCV64.rules using 'go generate'; DO NOT EDIT.
+// Code generated from _gen/RISCV64.rules; DO NOT EDIT.
+// generated with: cd _gen; go run .
 
 package ssa
 
@@ -1479,13 +1480,13 @@ func rewriteValueRISCV64_OpLoad(v *Value) bool {
 		return true
 	}
 	// match: (Load <t> ptr mem)
-	// cond: ( is8BitInt(t) && t.IsSigned())
+	// cond: ( is8BitInt(t) && isSigned(t))
 	// result: (MOVBload ptr mem)
 	for {
 		t := v.Type
 		ptr := v_0
 		mem := v_1
-		if !(is8BitInt(t) && t.IsSigned()) {
+		if !(is8BitInt(t) && isSigned(t)) {
 			break
 		}
 		v.reset(OpRISCV64MOVBload)
@@ -1493,13 +1494,13 @@ func rewriteValueRISCV64_OpLoad(v *Value) bool {
 		return true
 	}
 	// match: (Load <t> ptr mem)
-	// cond: ( is8BitInt(t) && !t.IsSigned())
+	// cond: ( is8BitInt(t) && !isSigned(t))
 	// result: (MOVBUload ptr mem)
 	for {
 		t := v.Type
 		ptr := v_0
 		mem := v_1
-		if !(is8BitInt(t) && !t.IsSigned()) {
+		if !(is8BitInt(t) && !isSigned(t)) {
 			break
 		}
 		v.reset(OpRISCV64MOVBUload)
@@ -1507,13 +1508,13 @@ func rewriteValueRISCV64_OpLoad(v *Value) bool {
 		return true
 	}
 	// match: (Load <t> ptr mem)
-	// cond: (is16BitInt(t) && t.IsSigned())
+	// cond: (is16BitInt(t) && isSigned(t))
 	// result: (MOVHload ptr mem)
 	for {
 		t := v.Type
 		ptr := v_0
 		mem := v_1
-		if !(is16BitInt(t) && t.IsSigned()) {
+		if !(is16BitInt(t) && isSigned(t)) {
 			break
 		}
 		v.reset(OpRISCV64MOVHload)
@@ -1521,13 +1522,13 @@ func rewriteValueRISCV64_OpLoad(v *Value) bool {
 		return true
 	}
 	// match: (Load <t> ptr mem)
-	// cond: (is16BitInt(t) && !t.IsSigned())
+	// cond: (is16BitInt(t) && !isSigned(t))
 	// result: (MOVHUload ptr mem)
 	for {
 		t := v.Type
 		ptr := v_0
 		mem := v_1
-		if !(is16BitInt(t) && !t.IsSigned()) {
+		if !(is16BitInt(t) && !isSigned(t)) {
 			break
 		}
 		v.reset(OpRISCV64MOVHUload)
@@ -1535,13 +1536,13 @@ func rewriteValueRISCV64_OpLoad(v *Value) bool {
 		return true
 	}
 	// match: (Load <t> ptr mem)
-	// cond: (is32BitInt(t) && t.IsSigned())
+	// cond: (is32BitInt(t) && isSigned(t))
 	// result: (MOVWload ptr mem)
 	for {
 		t := v.Type
 		ptr := v_0
 		mem := v_1
-		if !(is32BitInt(t) && t.IsSigned()) {
+		if !(is32BitInt(t) && isSigned(t)) {
 			break
 		}
 		v.reset(OpRISCV64MOVWload)
@@ -1549,13 +1550,13 @@ func rewriteValueRISCV64_OpLoad(v *Value) bool {
 		return true
 	}
 	// match: (Load <t> ptr mem)
-	// cond: (is32BitInt(t) && !t.IsSigned())
+	// cond: (is32BitInt(t) && !isSigned(t))
 	// result: (MOVWUload ptr mem)
 	for {
 		t := v.Type
 		ptr := v_0
 		mem := v_1
-		if !(is32BitInt(t) && !t.IsSigned()) {
+		if !(is32BitInt(t) && !isSigned(t)) {
 			break
 		}
 		v.reset(OpRISCV64MOVWUload)
@@ -1607,44 +1608,17 @@ func rewriteValueRISCV64_OpLoad(v *Value) bool {
 	return false
 }
 func rewriteValueRISCV64_OpLocalAddr(v *Value) bool {
-	v_1 := v.Args[1]
 	v_0 := v.Args[0]
-	b := v.Block
-	typ := &b.Func.Config.Types
-	// match: (LocalAddr <t> {sym} base mem)
-	// cond: t.Elem().HasPointers()
-	// result: (MOVaddr {sym} (SPanchored base mem))
-	for {
-		t := v.Type
-		sym := auxToSym(v.Aux)
-		base := v_0
-		mem := v_1
-		if !(t.Elem().HasPointers()) {
-			break
-		}
-		v.reset(OpRISCV64MOVaddr)
-		v.Aux = symToAux(sym)
-		v0 := b.NewValue0(v.Pos, OpSPanchored, typ.Uintptr)
-		v0.AddArg2(base, mem)
-		v.AddArg(v0)
-		return true
-	}
-	// match: (LocalAddr <t> {sym} base _)
-	// cond: !t.Elem().HasPointers()
+	// match: (LocalAddr {sym} base _)
 	// result: (MOVaddr {sym} base)
 	for {
-		t := v.Type
 		sym := auxToSym(v.Aux)
 		base := v_0
-		if !(!t.Elem().HasPointers()) {
-			break
-		}
 		v.reset(OpRISCV64MOVaddr)
 		v.Aux = symToAux(sym)
 		v.AddArg(base)
 		return true
 	}
-	return false
 }
 func rewriteValueRISCV64_OpLsh16x16(v *Value) bool {
 	v_1 := v.Args[1]
@@ -3150,18 +3124,17 @@ func rewriteValueRISCV64_OpPanicBounds(v *Value) bool {
 func rewriteValueRISCV64_OpRISCV64ADD(v *Value) bool {
 	v_1 := v.Args[1]
 	v_0 := v.Args[0]
-	// match: (ADD (MOVDconst <t> [val]) x)
-	// cond: is32Bit(val) && !t.IsPtr()
+	// match: (ADD (MOVDconst [val]) x)
+	// cond: is32Bit(val)
 	// result: (ADDI [val] x)
 	for {
 		for _i0 := 0; _i0 <= 1; _i0, v_0, v_1 = _i0+1, v_1, v_0 {
 			if v_0.Op != OpRISCV64MOVDconst {
 				continue
 			}
-			t := v_0.Type
 			val := auxIntToInt64(v_0.AuxInt)
 			x := v_1
-			if !(is32Bit(val) && !t.IsPtr()) {
+			if !(is32Bit(val)) {
 				continue
 			}
 			v.reset(OpRISCV64ADDI)
@@ -3322,7 +3295,7 @@ func rewriteValueRISCV64_OpRISCV64FMADDD(v *Value) bool {
 	v_0 := v.Args[0]
 	// match: (FMADDD neg:(FNEGD x) y z)
 	// cond: neg.Uses == 1
-	// result: (FNMSUBD x y z)
+	// result: (FNMADDD x y z)
 	for {
 		for _i0 := 0; _i0 <= 1; _i0, v_0, v_1 = _i0+1, v_1, v_0 {
 			neg := v_0
@@ -3335,7 +3308,7 @@ func rewriteValueRISCV64_OpRISCV64FMADDD(v *Value) bool {
 			if !(neg.Uses == 1) {
 				continue
 			}
-			v.reset(OpRISCV64FNMSUBD)
+			v.reset(OpRISCV64FNMADDD)
 			v.AddArg3(x, y, z)
 			return true
 		}
@@ -3367,7 +3340,7 @@ func rewriteValueRISCV64_OpRISCV64FMSUBD(v *Value) bool {
 	v_0 := v.Args[0]
 	// match: (FMSUBD neg:(FNEGD x) y z)
 	// cond: neg.Uses == 1
-	// result: (FNMADDD x y z)
+	// result: (FNMSUBD x y z)
 	for {
 		for _i0 := 0; _i0 <= 1; _i0, v_0, v_1 = _i0+1, v_1, v_0 {
 			neg := v_0
@@ -3380,7 +3353,7 @@ func rewriteValueRISCV64_OpRISCV64FMSUBD(v *Value) bool {
 			if !(neg.Uses == 1) {
 				continue
 			}
-			v.reset(OpRISCV64FNMADDD)
+			v.reset(OpRISCV64FNMSUBD)
 			v.AddArg3(x, y, z)
 			return true
 		}
@@ -3412,7 +3385,7 @@ func rewriteValueRISCV64_OpRISCV64FNMADDD(v *Value) bool {
 	v_0 := v.Args[0]
 	// match: (FNMADDD neg:(FNEGD x) y z)
 	// cond: neg.Uses == 1
-	// result: (FMSUBD x y z)
+	// result: (FMADDD x y z)
 	for {
 		for _i0 := 0; _i0 <= 1; _i0, v_0, v_1 = _i0+1, v_1, v_0 {
 			neg := v_0
@@ -3425,7 +3398,7 @@ func rewriteValueRISCV64_OpRISCV64FNMADDD(v *Value) bool {
 			if !(neg.Uses == 1) {
 				continue
 			}
-			v.reset(OpRISCV64FMSUBD)
+			v.reset(OpRISCV64FMADDD)
 			v.AddArg3(x, y, z)
 			return true
 		}
@@ -3457,7 +3430,7 @@ func rewriteValueRISCV64_OpRISCV64FNMSUBD(v *Value) bool {
 	v_0 := v.Args[0]
 	// match: (FNMSUBD neg:(FNEGD x) y z)
 	// cond: neg.Uses == 1
-	// result: (FMADDD x y z)
+	// result: (FMSUBD x y z)
 	for {
 		for _i0 := 0; _i0 <= 1; _i0, v_0, v_1 = _i0+1, v_1, v_0 {
 			neg := v_0
@@ -3470,7 +3443,7 @@ func rewriteValueRISCV64_OpRISCV64FNMSUBD(v *Value) bool {
 			if !(neg.Uses == 1) {
 				continue
 			}
-			v.reset(OpRISCV64FMADDD)
+			v.reset(OpRISCV64FMSUBD)
 			v.AddArg3(x, y, z)
 			return true
 		}
@@ -7862,14 +7835,14 @@ func rewriteValueRISCV64_OpStore(v *Value) bool {
 		return true
 	}
 	// match: (Store {t} ptr val mem)
-	// cond: t.Size() == 4 && !t.IsFloat()
+	// cond: t.Size() == 4 && !is32BitFloat(val.Type)
 	// result: (MOVWstore ptr val mem)
 	for {
 		t := auxToType(v.Aux)
 		ptr := v_0
 		val := v_1
 		mem := v_2
-		if !(t.Size() == 4 && !t.IsFloat()) {
+		if !(t.Size() == 4 && !is32BitFloat(val.Type)) {
 			break
 		}
 		v.reset(OpRISCV64MOVWstore)
@@ -7877,14 +7850,14 @@ func rewriteValueRISCV64_OpStore(v *Value) bool {
 		return true
 	}
 	// match: (Store {t} ptr val mem)
-	// cond: t.Size() == 8 && !t.IsFloat()
+	// cond: t.Size() == 8 && !is64BitFloat(val.Type)
 	// result: (MOVDstore ptr val mem)
 	for {
 		t := auxToType(v.Aux)
 		ptr := v_0
 		val := v_1
 		mem := v_2
-		if !(t.Size() == 8 && !t.IsFloat()) {
+		if !(t.Size() == 8 && !is64BitFloat(val.Type)) {
 			break
 		}
 		v.reset(OpRISCV64MOVDstore)
@@ -7892,14 +7865,14 @@ func rewriteValueRISCV64_OpStore(v *Value) bool {
 		return true
 	}
 	// match: (Store {t} ptr val mem)
-	// cond: t.Size() == 4 && t.IsFloat()
+	// cond: t.Size() == 4 && is32BitFloat(val.Type)
 	// result: (FMOVWstore ptr val mem)
 	for {
 		t := auxToType(v.Aux)
 		ptr := v_0
 		val := v_1
 		mem := v_2
-		if !(t.Size() == 4 && t.IsFloat()) {
+		if !(t.Size() == 4 && is32BitFloat(val.Type)) {
 			break
 		}
 		v.reset(OpRISCV64FMOVWstore)
@@ -7907,14 +7880,14 @@ func rewriteValueRISCV64_OpStore(v *Value) bool {
 		return true
 	}
 	// match: (Store {t} ptr val mem)
-	// cond: t.Size() == 8 && t.IsFloat()
+	// cond: t.Size() == 8 && is64BitFloat(val.Type)
 	// result: (FMOVDstore ptr val mem)
 	for {
 		t := auxToType(v.Aux)
 		ptr := v_0
 		val := v_1
 		mem := v_2
-		if !(t.Size() == 8 && t.IsFloat()) {
+		if !(t.Size() == 8 && is64BitFloat(val.Type)) {
 			break
 		}
 		v.reset(OpRISCV64FMOVDstore)

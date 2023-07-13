@@ -260,11 +260,9 @@ func finishsweep_m() {
 		c.fullUnswept(sg).reset()
 	}
 
-	// Sweeping is done, so there won't be any new memory to
-	// scavenge for a bit.
-	//
-	// If the scavenger isn't already awake, wake it up. There's
-	// definitely work for it to do at this point.
+	// Sweeping is done, so if the scavenger isn't already awake,
+	// wake it up. There's definitely work for it to do at this
+	// point.
 	scavenger.wake()
 
 	nextMarkBitArenaEpoch()
@@ -277,7 +275,7 @@ func bgsweep(c chan int) {
 	lock(&sweep.lock)
 	sweep.parked = true
 	c <- 1
-	goparkunlock(&sweep.lock, waitReasonGCSweepWait, traceBlockGCSweep, 1)
+	goparkunlock(&sweep.lock, waitReasonGCSweepWait, traceEvGoBlock, 1)
 
 	for {
 		// bgsweep attempts to be a "low priority" goroutine by intentionally
@@ -318,7 +316,7 @@ func bgsweep(c chan int) {
 			continue
 		}
 		sweep.parked = true
-		goparkunlock(&sweep.lock, waitReasonGCSweepWait, traceBlockGCSweep, 1)
+		goparkunlock(&sweep.lock, waitReasonGCSweepWait, traceEvGoBlock, 1)
 	}
 }
 
@@ -425,17 +423,9 @@ func sweepone() uintptr {
 		if debug.scavtrace > 0 {
 			systemstack(func() {
 				lock(&mheap_.lock)
-
-				// Get released stats.
-				releasedBg := mheap_.pages.scav.releasedBg.Load()
-				releasedEager := mheap_.pages.scav.releasedEager.Load()
-
-				// Print the line.
-				printScavTrace(releasedBg, releasedEager, false)
-
-				// Update the stats.
-				mheap_.pages.scav.releasedBg.Add(-releasedBg)
-				mheap_.pages.scav.releasedEager.Add(-releasedEager)
+				released := atomic.Loaduintptr(&mheap_.pages.scav.released)
+				printScavTrace(released, false)
+				atomic.Storeuintptr(&mheap_.pages.scav.released, 0)
 				unlock(&mheap_.lock)
 			})
 		}
@@ -494,7 +484,7 @@ func (s *mspan) ensureSwept() {
 	}
 }
 
-// sweep frees or collects finalizers for blocks not marked in the mark phase.
+// Sweep frees or collects finalizers for blocks not marked in the mark phase.
 // It clears the mark bits in preparation for the next GC round.
 // Returns true if the span was returned to heap.
 // If preserve=true, don't return it to heap nor relink in mcentral lists;
@@ -520,7 +510,7 @@ func (sl *sweepLocked) sweep(preserve bool) bool {
 		throw("mspan.sweep: bad span state")
 	}
 
-	if traceEnabled() {
+	if trace.enabled {
 		traceGCSweepSpan(s.npages * _PageSize)
 	}
 
@@ -659,19 +649,14 @@ func (sl *sweepLocked) sweep(preserve bool) bool {
 	s.allocCount = nalloc
 	s.freeindex = 0 // reset allocation index to start of span.
 	s.freeIndexForScan = 0
-	if traceEnabled() {
-		getg().m.p.ptr().trace.reclaimed += uintptr(nfreed) * s.elemsize
+	if trace.enabled {
+		getg().m.p.ptr().traceReclaimed += uintptr(nfreed) * s.elemsize
 	}
 
 	// gcmarkBits becomes the allocBits.
 	// get a fresh cleared gcmarkBits in preparation for next GC
 	s.allocBits = s.gcmarkBits
 	s.gcmarkBits = newMarkBits(s.nelems)
-
-	// refresh pinnerBits if they exists
-	if s.pinnerBits != nil {
-		s.refreshPinnerBits()
-	}
 
 	// Initialize alloc bits cache.
 	s.refillAllocCache(0)
@@ -884,7 +869,7 @@ func deductSweepCredit(spanBytes uintptr, callerSweepPages uintptr) {
 		return
 	}
 
-	if traceEnabled() {
+	if trace.enabled {
 		traceGCSweepStart()
 	}
 
@@ -924,7 +909,7 @@ retry:
 		}
 	}
 
-	if traceEnabled() {
+	if trace.enabled {
 		traceGCSweepDone()
 	}
 }

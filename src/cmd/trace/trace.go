@@ -647,7 +647,7 @@ func generateTrace(params *traceParams, consumer traceConsumer) error {
 			oldState = info.state
 		}
 		if info.state != oldState && setGStateErr == nil {
-			setGStateErr = fmt.Errorf("expected G %d to be in state %d, but got state %d", g, oldState, info.state)
+			setGStateErr = fmt.Errorf("expected G %d to be in state %d, but got state %d", g, oldState, newState)
 		}
 		ctx.gstates[info.state]--
 		ctx.gstates[newState]++
@@ -764,12 +764,12 @@ func generateTrace(params *traceParams, consumer traceConsumer) error {
 		case trace.EvGCStart:
 			ctx.emitSlice(ev, "GC")
 		case trace.EvGCDone:
-		case trace.EvSTWStart:
+		case trace.EvGCSTWStart:
 			if ctx.mode&modeGoroutineOriented != 0 {
 				continue
 			}
 			ctx.emitSlice(ev, fmt.Sprintf("STW (%s)", ev.SArgs[0]))
-		case trace.EvSTWDone:
+		case trace.EvGCSTWDone:
 		case trace.EvGCMarkAssistStart:
 			// Mark assists can continue past preemptions, so truncate to the
 			// whichever comes first. We'll synthesize another slice if
